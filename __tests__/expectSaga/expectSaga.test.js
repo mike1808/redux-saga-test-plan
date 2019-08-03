@@ -8,6 +8,9 @@ import {
   spawn,
   take,
   takeEvery,
+  race,
+  actionChannel,
+  select,
 } from 'redux-saga/effects';
 import { warn } from 'utils/logging';
 import { delay } from 'utils/async';
@@ -188,6 +191,7 @@ test('waits for promises that were added later on', async () => {
   warn.mockClear();
 
   const mock = jest.fn();
+
   function* saga() {
     yield delay(50);
     yield spawn(function* fork1() {
@@ -204,6 +208,7 @@ test("doesn't extend timeout period when new promises are added", async () => {
   warn.mockClear();
 
   const mock = jest.fn();
+
   function* saga() {
     yield delay(100);
     yield spawn(function* fork1() {
@@ -272,19 +277,29 @@ test('ignores effects without effect store', () => {
     yield put({ type: 'BACKGROUND' });
   }
 
+  function getData(state, arg) {
+    return state && state[arg];
+  }
+
   function* saga() {
     const task = yield fork(backgroundSaga);
+    yield actionChannel('BACKGROUND');
+
+    yield select(getData, 'data');
+
     yield join(task);
-    yield put({ type: 'DONE' });
+    yield put({ type: 'FINISHED', payload: { success: true } });
   }
 
   return expectSaga(saga)
-    .put({ type: 'DONE' })
+    .actionChannel.pattern('BACKGROUND')
+    .put.actionType('FINISHED')
     .run();
 });
 
 test('terminates and does not wait for Call effect Promises', async () => {
   warn.mockClear();
+
   function endpoint() {
     return Promise.reject();
   }

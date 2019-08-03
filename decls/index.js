@@ -1,7 +1,7 @@
 // @flow
 /* eslint-disable */
 
-declare type Api = {
+declare type Api = $ReadOnly<{
   next: Progresser,
   finish: Progresser,
   back: Back,
@@ -9,9 +9,9 @@ declare type Api = {
   restore: SaveRestore,
   restart: Restart,
   throw: ThrowError,
-};
+}>;
 
-declare type ApiWithEffectsTesters = Api & {
+declare type ApiWithEffectsTesters = Api & $ReadOnly<{
   actionChannel: EffectTester,
   all: EffectTester,
   apply: EffectTester,
@@ -40,7 +40,7 @@ declare type ApiWithEffectsTesters = Api & {
   inspect: EffectTester,
   isDone: EffectTester,
   returns: EffectTester,
-};
+}>;
 
 declare type SavePoints = { [key: string]: Array<HistoryItem> };
 
@@ -139,8 +139,6 @@ type TimeoutConfig = {
   silenceTimeout?: boolean,
   timeout?: Timeout,
 };
-
-type Task = { toPromise: () => Promise<*> };
 
 type ProviderNext = Object;
 type ProviderNextF = () => ProviderNext;

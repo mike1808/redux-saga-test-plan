@@ -1,21 +1,20 @@
 // @flow
-import inspect from 'util-inspect';
 import isMatch from 'lodash.ismatch';
 import isEqual from 'lodash.isequal';
-import SagaTestError from '../shared/SagaTestError';
+import inspect from '../utils/inspect';
 import type ArraySet from '../utils/ArraySet';
 import serializeEffect from '../shared/serializeEffect';
 import reportActualEffects from './reportActualEffects';
 
-type ExpectationThunkArgs = {
+type ExpectationThunkArgs = {|
   storeState: mixed,
   returnValue: mixed,
   errorValue: mixed,
-};
+|};
 
 export type Expectation = ExpectationThunkArgs => void;
 
-type EffectExpectationArgs = {
+type EffectExpectationArgs = {|
   effectName: string,
   expectedEffect: mixed,
   storeKey: string,
@@ -23,7 +22,24 @@ type EffectExpectationArgs = {
   extractEffect: Function,
   store: ArraySet<mixed>,
   expected: boolean,
+|};
+
+const matchers = {
+  toEffectHappen(matcher, actual: ExpectationThunkArgs) {
+    return matcher.call(this, actual);
+  },
+  toSagaReturns(matcher, actual: ExpectationThunkArgs) {
+    return matcher.call(this, actual);
+  },
+  toHaveStoreState(matcher, actual: ExpectationThunkArgs) {
+    return matcher.call(this, actual);
+  },
+  toSagaThrow(matcher, actual: ExpectationThunkArgs) {
+    return matcher.call(this, actual);
+  },
 };
+
+expect.extend(matchers);
 
 export function createEffectExpectation({
   effectName,
@@ -34,32 +50,48 @@ export function createEffectExpectation({
   store,
   expected,
 }: EffectExpectationArgs): Expectation {
-  return () => {
+  function matcher() {
     const deleted = like
       ? store.deleteBy(item => isMatch(extractEffect(item), expectedEffect))
       : store.delete(expectedEffect);
 
-    let errorMessage = '';
+    const serializedEffect = like
+      ? `like ${inspect(expectedEffect)}`
+      : serializeEffect(expectedEffect, storeKey);
 
     if (deleted && !expected) {
-      const serializedEffect = serializeEffect(expectedEffect, storeKey);
-
-      errorMessage =
-        `\n${effectName} expectation unmet:` +
-        `\n\nNot Expected\n------------\n${serializedEffect}\n`;
-    } else if (!deleted && expected) {
-      const serializedEffect = serializeEffect(expectedEffect, storeKey);
-
-      errorMessage =
-        `\n${effectName} expectation unmet:` +
-        `\n\nExpected\n--------\n${serializedEffect}\n`;
-
-      errorMessage += reportActualEffects(store, storeKey, effectName);
+      return {
+        pass: false,
+        message: () =>
+          `Expected ${effectName} effect not to happen, but it did.` +
+          `\n\n${this.utils.RECEIVED_COLOR(`Received: ${serializedEffect}`)}`,
+      };
     }
 
-    if (errorMessage) {
-      throw new SagaTestError(errorMessage);
+    if (!deleted && expected) {
+      const serializedActual = reportActualEffects(store, storeKey);
+      return {
+        actual: store.values(),
+        expected: like ? { payload: expectedEffect } : expectedEffect,
+        pass: false,
+        message: () =>
+          `${`Expected ${effectName} effect to happen, but it never did.` +
+            `\n`}${
+            serializedActual
+              ? `\n${this.utils.EXPECTED_COLOR(
+                  `Actual effects: \n\n${reportActualEffects(store, storeKey)}`,
+                )}\n`
+              : ''
+          }\n${this.utils.RECEIVED_COLOR(`Received: ${serializedEffect}`)}`,
+      };
     }
+
+    return { pass: true, message: () => '' };
+  }
+
+  return (arg: ExpectationThunkArgs) => {
+    // $FlowFixMe
+    expect(matcher).toEffectHappen(arg);
   };
 }
 
@@ -72,33 +104,42 @@ export function createReturnExpectation({
   value,
   expected,
 }: ReturnExpectationArgs): Expectation {
-  return ({ returnValue }: ExpectationThunkArgs) => {
+  function matcher({ returnValue }: ExpectationThunkArgs) {
     if (expected && !isEqual(value, returnValue)) {
-      const serializedActual = inspect(returnValue, { depth: 3 });
-      const serializedExpected = inspect(value, { depth: 3 });
-
-      const errorMessage = `
-Expected to return:
--------------------
-${serializedExpected}
-
-But returned instead:
----------------------
-${serializedActual}
-`;
-
-      throw new SagaTestError(errorMessage);
-    } else if (!expected && isEqual(value, returnValue)) {
-      const serializedExpected = inspect(value, { depth: 3 });
-
-      const errorMessage = `
-Did not expect to return:
--------------------------
-${serializedExpected}
-`;
-
-      throw new SagaTestError(errorMessage);
+      return {
+        pass: false,
+        message: () =>
+          `${this.utils.DIM_COLOR(
+            'Expected the saga to return given value.',
+          )}` +
+          `\n\n${this.utils.diff(value, returnValue, {
+            expand: this.exand,
+          })}`,
+        actual: returnValue,
+        expected: value,
+      };
     }
+
+    if (!expected && isEqual(value, returnValue)) {
+      return {
+        pass: false,
+        message: () =>
+          `${this.utils.DIM_COLOR(
+            'Expected the saga not to return given value.',
+          )}` +
+          `\n\nBut it returned the exact value:` +
+          `\n  ${this.utils.printReceived(returnValue)}`,
+        actual: returnValue,
+        expected: value,
+      };
+    }
+
+    return { pass: true, message: () => '' };
+  }
+
+  return (arg: ExpectationThunkArgs) => {
+    // $FlowFixMe
+    expect(matcher).toSagaReturns(arg);
   };
 }
 
@@ -111,33 +152,41 @@ export function createStoreStateExpectation({
   state: expectedState,
   expected,
 }: StoreStateExpectationArgs): Expectation {
-  return ({ storeState }: ExpectationThunkArgs) => {
+  function matcher({ storeState }: ExpectationThunkArgs) {
     if (expected && !isEqual(expectedState, storeState)) {
-      const serializedActual = inspect(storeState, { depth: 3 });
-      const serializedExpected = inspect(expectedState, { depth: 3 });
-
-      const errorMessage = `
-Expected to have final store state:
------------------------------------
-${serializedExpected}
-
-But instead had final store state:
-----------------------------------
-${serializedActual}
-`;
-
-      throw new SagaTestError(errorMessage);
-    } else if (!expected && isEqual(expectedState, storeState)) {
-      const serializedExpected = inspect(expectedState, { depth: 3 });
-
-      const errorMessage = `
-Expected to not have final store state:
----------------------------------------
-${serializedExpected}
-`;
-
-      throw new SagaTestError(errorMessage);
+      return {
+        pass: false,
+        message: () =>
+          `${this.utils.DIM_COLOR(
+            'Expected saga to have final store state.',
+          )}` +
+          `\n\n${this.utils.diff(expectedState, storeState, {
+            expand: this.expand,
+          })}`,
+        actual: storeState,
+        expected: expectedState,
+      };
     }
+    if (!expected && isEqual(expectedState, storeState)) {
+      return {
+        pass: false,
+        message: () =>
+          `${this.utils.DIM_COLOR(
+            'Expected saga not to have final store state.',
+          )}` +
+          `\n\nBut it has the exact value:` +
+          `\n  ${this.utils.printReceived(expectedState)}`,
+        actual: expectedState,
+        expected: expectedState,
+      };
+    }
+
+    return { pass: true, message: () => '' };
+  }
+
+  return (arg: ExpectationThunkArgs) => {
+    // $FlowFixMe
+    expect(matcher).toHaveStoreState(arg);
   };
 }
 
@@ -150,11 +199,11 @@ export function createErrorExpectation({
   type,
   expected,
 }: ErrorExpectationArgs): Expectation {
-  return ({ errorValue }: ExpectationThunkArgs) => {
+  function matcher({ errorValue }: ExpectationThunkArgs) {
     let serializedExpected = typeof type;
 
     if (typeof type === 'object') {
-      serializedExpected = inspect(type, { depth: 3 });
+      serializedExpected = inspect(type);
     } else if (typeof type === 'function') {
       serializedExpected = type.name;
     }
@@ -164,48 +213,68 @@ export function createErrorExpectation({
       (typeof type === 'function' && errorValue instanceof type);
 
     if (!expected) {
-      if (typeof errorValue === 'undefined' || !matches()) return;
+      if (typeof errorValue === 'undefined' || !matches())
+        return { pass: true };
 
-      throw new SagaTestError(`
-Expected not to throw:
-----------------------
-${serializedExpected}
-`);
-    } else if (typeof errorValue === 'undefined') {
-      throw new SagaTestError(`
-Expected to thow:
--------------------
-${serializedExpected}
+      return {
+        pass: false,
+        message: () =>
+          `${this.utils.DIM_COLOR('Expected saga not to throw.')}` +
+          `\n\nBut it has thrown:` +
+          `\n  ${this.utils.printReceived(serializedExpected)}`,
+      };
+    }
 
-But no error thrown
----------------------
-`);
-    } else if (typeof type === 'object' && !matches()) {
-      const serializedActual = inspect(errorValue, { depth: 3 });
-      throw new SagaTestError(`
-Expected to throw:
--------------------
-${serializedExpected}
+    if (typeof errorValue === 'undefined') {
+      return {
+        pass: false,
+        message: () =>
+          `${this.utils.DIM_COLOR('Expected saga to throw.')}` +
+          `\n\nExpected to throw:` +
+          `\n  ${this.utils.printReceived(serializedExpected)}` +
+          `\nBut no error has thrown.`,
+      };
+    }
 
-But instead threw:
----------------------
-${serializedActual}
-`);
-    } else if (typeof type === 'function' && !matches()) {
+    if (typeof type === 'object' && !matches()) {
+      return {
+        pass: false,
+        message: () =>
+          `${this.utils.DIM_COLOR('Expected saga to throw.')}` +
+          `\n\n${this.utils.diff(type, errorValue, {
+            expand: this.expand,
+          })}`,
+        expected: type,
+        actual: errorValue,
+      };
+    }
+
+    if (typeof type === 'function' && !matches()) {
       const serializedActual =
-        typeof errorValue === 'function'
+        errorValue != null && typeof errorValue.constructor === 'function'
           ? errorValue.constructor.name
           : typeof errorValue;
 
-      throw new SagaTestError(`
-Expected to throw error of type:
---------------------------------
-${serializedExpected}
-
-But instead threw:
---------------------------------
-${serializedActual}
-`);
+      return {
+        pass: false,
+        message: () =>
+          `${this.utils.DIM_COLOR('Expected saga to throw error of type.')}` +
+          `\n\nExpected to throw: ${this.utils.printExpected(
+            serializedActual,
+          )}` +
+          `\nBut instead threw: ${this.utils.printReceived(
+            serializedExpected,
+          )}`,
+      };
     }
+
+    return {
+      pass: true,
+    };
+  }
+
+  return (args: ExpectationThunkArgs) => {
+    // $FlowFixMe
+    expect(matcher).toSagaThrow(args);
   };
 }

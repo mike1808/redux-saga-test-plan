@@ -1,5 +1,6 @@
 // @flow
 import { actionChannel, flush, put } from 'redux-saga/effects';
+import type { Saga } from 'redux-saga';
 import expectSaga from 'expectSaga';
 import * as m from 'expectSaga/matchers';
 import { dynamic } from 'expectSaga/providers';
@@ -7,9 +8,10 @@ import { dynamic } from 'expectSaga/providers';
 const fakeChannel = {
   take() {},
   close() {},
+  flush() {},
 };
 
-function* saga() {
+function* saga(): Saga<void> {
   const channel = yield actionChannel('FOO');
   const value = yield flush(channel);
 

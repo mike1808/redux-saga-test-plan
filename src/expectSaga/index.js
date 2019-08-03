@@ -1,11 +1,12 @@
 // @flow
 /* eslint-disable no-underscore-dangle */
 import { runSaga, stdChannel } from 'redux-saga';
+import type { Effect, Task, MulticastChannel } from 'redux-saga';
+
 import * as is from '@redux-saga/is';
 import * as effects from 'redux-saga/effects';
 import assign from 'object-assign';
 import { splitAt } from '../utils/array';
-import Map from '../utils/Map';
 import ArraySet from '../utils/ArraySet';
 import { warn } from '../utils/logging';
 import { delay, schedule } from '../utils/async';
@@ -105,7 +106,7 @@ export default function expectSaga(
   };
 
   const expectations: Array<Expectation> = [];
-  const ioChannel = stdChannel();
+  const ioChannel: MulticastChannel<*> = stdChannel();
   const queuedActions = [];
   const forkedTasks = [];
   const outstandingForkEffects = new Map();
@@ -275,7 +276,7 @@ export default function expectSaga(
     });
   }
 
-  function addForkedTask(task: Task): void {
+  function addForkedTask(task: Task<*>): void {
     stopDirty = true;
     forkedTasks.push(task);
   }
@@ -444,8 +445,8 @@ export default function expectSaga(
         }
       },
 
-      effectRejected() {},
-      effectCancelled() {},
+      effectRejected(_effectId: number, _error: any): void {},
+      effectCancelled(_effectId: number): void {},
     },
 
     logger: () => {},
@@ -606,7 +607,7 @@ export default function expectSaga(
     return api;
   }
 
-  function taskPromise(task: Task): Promise<*> {
+  function taskPromise(task: Task<*>): Promise<*> {
     return task.toPromise();
   }
 
@@ -744,10 +745,10 @@ export default function expectSaga(
   function createEffectTester(
     effectName: string,
     storeKey: string,
-    effectCreator: Function,
-    extractEffect: Function,
+    effectCreator: (...args: $ReadOnlyArray<any>) => Effect,
+    extractEffect: (...args: $ReadOnlyArray<any>) => Effect,
     like: boolean = false,
-  ): Function {
+  ) {
     return (...args: mixed[]) => {
       const expectedEffect = like ? args[0] : effectCreator(...args);
 
@@ -773,7 +774,7 @@ export default function expectSaga(
     effectName: string,
     storeKey: string,
     extractEffect: Function,
-  ): Function {
+  ) {
     return createEffectTester(
       effectName,
       storeKey,

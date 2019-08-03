@@ -1,5 +1,6 @@
 // @flow
 import { apply, put } from 'redux-saga/effects';
+import type { Saga } from 'redux-saga';
 import expectSaga from 'expectSaga';
 import * as m from 'expectSaga/matchers';
 import { dynamic } from 'expectSaga/providers';
@@ -12,9 +13,9 @@ const otherContext = {
   otherApiFunction: () => 1,
 };
 
-function* saga() {
-  const value = yield apply(context, 'apiFunction', [21]);
-  const otherValue = yield apply(otherContext, 'otherApiFunction');
+function* saga(): Saga<void> {
+  const value = yield apply(context, context.apiFunction, [21]);
+  const otherValue = yield apply(otherContext, otherContext.otherApiFunction);
   yield put({ type: 'DONE', payload: value + otherValue });
 }
 
@@ -34,13 +35,13 @@ test('uses provided value for `apply` via `call`', () =>
 
 test('uses static provided values from redux-saga/effects', () =>
   expectSaga(saga)
-    .provide([[apply(context, 'apiFunction', [21]), 42]])
+    .provide([[apply(context, context.apiFunction, [21]), 42]])
     .put({ type: 'DONE', payload: 43 })
     .run());
 
 test('uses static provided values from matchers', () =>
   expectSaga(saga)
-    .provide([[m.apply(context, 'apiFunction', [21]), 42]])
+    .provide([[m.apply(context, context.apiFunction, [21]), 42]])
     .put({ type: 'DONE', payload: 43 })
     .run());
 

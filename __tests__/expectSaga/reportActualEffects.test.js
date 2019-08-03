@@ -21,7 +21,7 @@ test('returns comparison string when values present', () => {
   const store = new ArraySet(effects);
   const result = reportActualEffects(store, 'CALL');
 
-  expect(result).toMatch(`1. ${serializeEffect(effects[0], 'CALL')}`);
-  expect(result).toMatch(`2. ${serializeEffect(effects[1], 'CALL')}`);
-  expect(result).toMatch(`3. ${serializeEffect(effects[2], 'CALL')}`);
+  expect(result).toMatch(`${serializeEffect(effects[0], 'CALL')}`);
+  expect(result).toMatch(`${serializeEffect(effects[1], 'CALL')}`);
+  expect(result).toMatch(`${serializeEffect(effects[2], 'CALL')}`);
 });

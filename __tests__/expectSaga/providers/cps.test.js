@@ -1,13 +1,17 @@
 // @flow
 import { cps, put } from 'redux-saga/effects';
+import type { Saga } from 'redux-saga';
+
 import expectSaga from 'expectSaga';
 import * as m from 'expectSaga/matchers';
 import { dynamic } from 'expectSaga/providers';
 
-const handler = cb => cb(null, 1);
-const otherHandler = () => 0;
+const handler = (cb): void => {
+  cb(null, 1);
+};
+const otherHandler = (): number => 0;
 
-function* saga() {
+function* saga(): Saga<void> {
   const value = yield cps(handler);
   const otherValue = yield cps(otherHandler, 21);
 

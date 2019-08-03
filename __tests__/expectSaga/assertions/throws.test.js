@@ -38,7 +38,7 @@ test('fails when no error thrown', done =>
     .throws(CustomError)
     .run()
     .catch(e => {
-      expect(e.message).toMatch(/but no error thrown/i);
+      expect(e.message).toMatch(/but no error has thrown/i);
       done();
     }));
 
@@ -56,7 +56,8 @@ test('fails when non-matching error value thrown', done =>
     .throws({ message: 'Error 2' })
     .run()
     .catch(e => {
-      expect(e.message).toMatch(/but instead threw/i);
+      expect(e.message).toMatch(/Expected/i);
+      expect(e.message).toMatch(/Received/i);
       done();
     }));
 
@@ -66,7 +67,9 @@ test('checks other expectations when matching error thrown', done =>
     .throws(CustomError)
     .run()
     .catch(e => {
-      expect(e.message).toMatch(/put expectation unmet/i);
+      expect(e.message).toMatch(
+        /Expected put effect to happen, but it never did/i,
+      );
       done();
     }));
 
@@ -80,7 +83,7 @@ test('negative assertion fails when matching error thrown', done =>
     .not.throws(CustomError)
     .run()
     .catch(e => {
-      expect(e.message).toMatch(/expected not to throw/i);
+      expect(e.message).toMatch(/expected saga not to throw/i);
       done();
     }));
 

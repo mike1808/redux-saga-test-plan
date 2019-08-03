@@ -9,7 +9,7 @@ const context = {
 };
 
 function* mainSaga() {
-  yield apply(context, 'identity');
+  yield apply(context, context.identity);
 }
 
 test('handles call with method string', () => {

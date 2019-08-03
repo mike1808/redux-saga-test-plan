@@ -26,7 +26,7 @@ export const next = () => NEXT;
 
 export const handlers = {
   [ACTION_CHANNEL]: 'actionChannel',
-  [ALL](providers, value) {
+  [ALL](providers: Providers, value: Object) {
     if (providers.all) {
       return providers.all(value, next);
     }
@@ -38,7 +38,7 @@ export const handlers = {
   [CANCELLED]: 'cancelled',
   [CPS]: 'cps',
   [FLUSH]: 'flush',
-  [FORK](providers, value) {
+  [FORK](providers: Providers, value: Object) {
     const effect = asEffect.fork(value);
 
     if (providers.fork && !effect.detached) {

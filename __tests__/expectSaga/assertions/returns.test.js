@@ -24,7 +24,7 @@ test('call assertion fails', () =>
     .run()
     .then(unreachableError)
     .catch(e => {
-      expect(e.message).toMatch(/expected to return/i);
+      expect(e.message).toMatch(/expected the saga to return/i);
     }));
 
 test('negative call assertion fails', () =>
@@ -33,7 +33,7 @@ test('negative call assertion fails', () =>
     .run()
     .then(unreachableError)
     .catch(e => {
-      expect(e.message).toMatch(/did not expect to return/i);
+      expect(e.message).toMatch(/expected the saga not to return/i);
     }));
 
 test('called sagas do not affect return value', () => {

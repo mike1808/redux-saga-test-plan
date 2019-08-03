@@ -145,7 +145,7 @@ test('hasFinalState fails with incorrect state without initial state', () => {
     .run()
     .then(unreachableError)
     .catch(e => {
-      expect(e.message).toMatch(/Expected to have final store state/);
+      expect(e.message).toMatch(/Expected saga to have final store state/);
     });
 });
 
@@ -162,7 +162,7 @@ test('hasFinalState fails with incorrect state with initial state', () => {
     .run()
     .then(unreachableError)
     .catch(e => {
-      expect(e.message).toMatch(/Expected to have final store state/);
+      expect(e.message).toMatch(/Expected saga to have final store state/);
     });
 });
 
@@ -181,7 +181,9 @@ test('negated hasFinalState fails with correct state without initial state', () 
       .run()
       .then(unreachableError)
       .catch(e => {
-        expect(e.message).toMatch(/Expected to not have final store state/);
+        expect(e.message).toMatch(
+          /Expected saga not to have final store state/,
+        );
       })
   );
 });
@@ -201,7 +203,9 @@ test('negated hasFinalState fails with correct state with initial state', () => 
       .run()
       .then(unreachableError)
       .catch(e => {
-        expect(e.message).toMatch(/Expected to not have final store state/);
+        expect(e.message).toMatch(
+          /Expected saga not to have final store state/,
+        );
       })
   );
 });

@@ -11,9 +11,12 @@ export default function reportActualEffects(
     return '';
   }
 
-  const serializedEffects = values.map(
-    (effect, i) => `${i + 1}. ${serializeEffect(effect, storeKey)}`,
+  const serializedEffects = values.map(effect =>
+    serializeEffect(effect, storeKey)
+      .split('\n')
+      .map(line => `  ${line}`)
+      .join('\n'),
   );
 
-  return `\nActual:\n------\n${serializedEffects.join('\n')}\n`;
+  return serializedEffects.join('\n\n');
 }

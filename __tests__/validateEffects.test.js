@@ -4,7 +4,9 @@ import { call } from 'redux-saga/effects';
 import { CALL } from 'shared/keys';
 import validateEffects from 'testSaga/validateEffects';
 
-const identity = value => value;
+function identity<T>(value: T): T {
+  return value;
+}
 
 test('returns error message for missing actual value', () => {
   const result = validateEffects(
